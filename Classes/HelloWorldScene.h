@@ -46,6 +46,8 @@ private:
 	Sprite* _player;
 
 	void addMonster(float dt);
+
+	bool onTouchBegan(Touch *touch, Event *unused_event);
 };
 
 #endif // __HELLOWORLD_SCENE_H__

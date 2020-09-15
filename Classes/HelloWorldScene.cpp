@@ -64,6 +64,10 @@ bool HelloWorld::init()
 	srand((unsigned int)time(nullptr)); // seed random number generator
 	this->schedule(schedule_selector(HelloWorld::addMonster), 1.5); // add monster every 1.5 seconds
 
+	auto eventListener = EventListenerTouchOneByOne::create();
+	eventListener->onTouchBegan = CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(eventListener, _player);
+
     return true;
 }
 
@@ -103,4 +107,37 @@ void HelloWorld::addMonster(float dt) {
 	auto actionMove = MoveTo::create(randomDuration, Vec2(-monsterContentSize.width / 2, randomY));
 	auto actionRemove = RemoveSelf::create();
 	monster->runAction(Sequence::create(actionMove, actionRemove, nullptr));
+}
+
+bool HelloWorld::onTouchBegan(Touch *touch, Event *unused_event) {
+	// 1 - Just an example for how to get the _player object
+	//auto node = unused_event->getCurrentTarget();
+
+	// 2
+	Vec2 touchLocation = touch->getLocation();
+	Vec2 offset = touchLocation - _player->getPosition();
+
+	// 3
+	if (offset.x < 0) {
+		return true;
+	}
+
+	// 4
+	auto projectile = Sprite::create("sprites/projectile.png");
+	projectile->setPosition(_player->getPosition());
+	this->addChild(projectile);
+
+	// 5
+	offset.normalize();
+	auto shootAmount = offset * 1000;
+
+	// 6
+	auto realDest = shootAmount + projectile->getPosition();
+
+	// 7
+	auto actionMove = MoveTo::create(2.0f, realDest);
+	auto actionRemove = RemoveSelf::create();
+	projectile->runAction(Sequence::create(actionMove, actionRemove, nullptr));
+
+	return true;
 }
