@@ -48,6 +48,8 @@ private:
 	void addMonster(float dt);
 
 	bool onTouchBegan(Touch *touch, Event *unused_event);
+
+	bool onContactBegan(PhysicsContact &contact);
 };
 
 #endif // __HELLOWORLD_SCENE_H__

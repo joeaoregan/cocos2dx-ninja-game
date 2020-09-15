@@ -27,9 +27,21 @@
 
 USING_NS_CC;
 
+enum class PhysicsCategory {
+	None = 0,
+	Monster = (1 << 0), // 1
+	Projectile = (1 << 1), // 2
+	All = PhysicsCategory::Monster | PhysicsCategory::Projectile // 3
+};
+
 Scene* HelloWorld::createScene()
 {
-    return HelloWorld::create();
+	auto scene = Scene::createWithPhysics();
+	scene->getPhysicsWorld()->setGravity(Vec2(0, 0));
+	scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+	auto layer = HelloWorld::create();
+	scene->addChild(layer);
+	return scene;
 }
 
 // Print useful error message instead of segfaulting when files are not there.
@@ -52,21 +64,30 @@ bool HelloWorld::init()
 	// 2
 	auto origin = Director::getInstance()->getVisibleOrigin();
 	auto winSize = Director::getInstance()->getVisibleSize();
-	// 3
+
+	// 3 Create a DrawNode to draw a grey rectangle that fills the screen, for game background
 	auto background = DrawNode::create();
-	background->drawSolidRect(origin, winSize, Color4F(0.6, 0.6, 0.6, 1.0));
+	background->drawSolidRect(origin, winSize, Color4F(0.6F, 0.6F, 0.6F, 1.0F));
 	this->addChild(background);
-	//4
+
+	// 4 Create the player sprite by passing the image's name
 	_player = Sprite::create("sprites/player.png");
 	_player->setPosition(Vec2(winSize.width * 0.1, winSize.height * 0.5));
 	this->addChild(_player);
 
+	// Add & move monsters
 	srand((unsigned int)time(nullptr)); // seed random number generator
 	this->schedule(schedule_selector(HelloWorld::addMonster), 1.5); // add monster every 1.5 seconds
 
+	// Add projectiles
 	auto eventListener = EventListenerTouchOneByOne::create();
 	eventListener->onTouchBegan = CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
 	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(eventListener, _player);
+
+	// Receive contact notifications
+	auto contactListener = EventListenerPhysicsContact::create();
+	contactListener->onContactBegin = CC_CALLBACK_1(HelloWorld::onContactBegan, this);
+	this->getEventDispatcher()->addEventListenerWithSceneGraphPriority(contactListener, this);
 
     return true;
 }
@@ -87,22 +108,31 @@ void HelloWorld::addMonster(float dt) {
 	auto monster = Sprite::create("sprites/monster.png");
 
 	// 1
+	auto monsterSize = monster->getContentSize();
+	auto physicsBody = PhysicsBody::createBox(Size(monsterSize.width, monsterSize.height),
+		PhysicsMaterial(0.1f, 1.0f, 0.0f));
+	// 2
+	physicsBody->setDynamic(true);
+	// 3
+	physicsBody->setCategoryBitmask((int)PhysicsCategory::Monster);
+	physicsBody->setCollisionBitmask((int)PhysicsCategory::None);
+	physicsBody->setContactTestBitmask((int)PhysicsCategory::Projectile);
+	monster->setPhysicsBody(physicsBody);
+
+	// 1
 	auto monsterContentSize = monster->getContentSize();
 	auto selfContentSize = this->getContentSize();
 	int minY = monsterContentSize.height / 2;
 	int maxY = selfContentSize.height - monsterContentSize.height / 2;
 	int rangeY = maxY - minY;
 	int randomY = (rand() % rangeY) + minY;
-
-	monster->setPosition(Vec2(selfContentSize.width + monsterContentSize.width / 2, randomY));
+	monster->setPosition(Vec2(selfContentSize.width + monsterContentSize.width / 2, randomY));	// random position off screen
 	this->addChild(monster);
-
 	// 2
 	int minDuration = 2.0;
 	int maxDuration = 4.0;
 	int rangeDuration = maxDuration - minDuration;
 	int randomDuration = (rand() % rangeDuration) + minDuration;
-
 	// 3
 	auto actionMove = MoveTo::create(randomDuration, Vec2(-monsterContentSize.width / 2, randomY));
 	auto actionRemove = RemoveSelf::create();
@@ -113,31 +143,55 @@ bool HelloWorld::onTouchBegan(Touch *touch, Event *unused_event) {
 	// 1 - Just an example for how to get the _player object
 	//auto node = unused_event->getCurrentTarget();
 
-	// 2
+	// 2 get the coordinate of the touch, calculate the offset point
 	Vec2 touchLocation = touch->getLocation();
 	Vec2 offset = touchLocation - _player->getPosition();
 
-	// 3
+	// 3 Player not let shoot backwards
 	if (offset.x < 0) {
 		return true;
 	}
 
-	// 4
+	// 4 Create a projectile
 	auto projectile = Sprite::create("sprites/projectile.png");
 	projectile->setPosition(_player->getPosition());
+
+	auto projectileSize = projectile->getContentSize();
+	auto physicsBody = PhysicsBody::createCircle(projectileSize.width / 2);
+	physicsBody->setDynamic(true);
+	physicsBody->setCategoryBitmask((int)PhysicsCategory::Projectile);
+	physicsBody->setCollisionBitmask((int)PhysicsCategory::None);
+	physicsBody->setContactTestBitmask((int)PhysicsCategory::Monster);
+	projectile->setPhysicsBody(physicsBody);
+
 	this->addChild(projectile);
 
-	// 5
+	// 5 length enough to extend past screen at current resolution
 	offset.normalize();
 	auto shootAmount = offset * 1000;
 
-	// 6
+	// 6 Add vector to projectile's position gives target position
 	auto realDest = shootAmount + projectile->getPosition();
 
-	// 7
+	// 7 Move the projectile to the target position over 2 seconds
 	auto actionMove = MoveTo::create(2.0f, realDest);
 	auto actionRemove = RemoveSelf::create();
 	projectile->runAction(Sequence::create(actionMove, actionRemove, nullptr));
+
+	return true;
+}
+
+bool HelloWorld::onContactBegan(PhysicsContact &contact) {
+	cocos2d::Node* nodeA = contact.getShapeA()->getBody()->getNode();
+	cocos2d::Node* nodeB = contact.getShapeB()->getBody()->getNode();
+
+	if (nodeA != NULL) { // Added check for null
+		nodeA->removeFromParent();
+
+		if (nodeB != NULL) {
+			nodeB->removeFromParent();
+		}
+	}
 
 	return true;
 }
