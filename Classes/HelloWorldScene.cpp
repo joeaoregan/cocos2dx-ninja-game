@@ -61,6 +61,9 @@ bool HelloWorld::init()
 	_player->setPosition(Vec2(winSize.width * 0.1, winSize.height * 0.5));
 	this->addChild(_player);
 
+	srand((unsigned int)time(nullptr)); // seed random number generator
+	this->schedule(schedule_selector(HelloWorld::addMonster), 1.5); // add monster every 1.5 seconds
+
     return true;
 }
 
@@ -74,6 +77,30 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 
     //EventCustom customEndEvent("game_scene_close_event");
     //_eventDispatcher->dispatchEvent(&customEndEvent);
+}
 
+void HelloWorld::addMonster(float dt) {
+	auto monster = Sprite::create("sprites/monster.png");
 
+	// 1
+	auto monsterContentSize = monster->getContentSize();
+	auto selfContentSize = this->getContentSize();
+	int minY = monsterContentSize.height / 2;
+	int maxY = selfContentSize.height - monsterContentSize.height / 2;
+	int rangeY = maxY - minY;
+	int randomY = (rand() % rangeY) + minY;
+
+	monster->setPosition(Vec2(selfContentSize.width + monsterContentSize.width / 2, randomY));
+	this->addChild(monster);
+
+	// 2
+	int minDuration = 2.0;
+	int maxDuration = 4.0;
+	int rangeDuration = maxDuration - minDuration;
+	int randomDuration = (rand() % rangeDuration) + minDuration;
+
+	// 3
+	auto actionMove = MoveTo::create(randomDuration, Vec2(-monsterContentSize.width / 2, randomY));
+	auto actionRemove = RemoveSelf::create();
+	monster->runAction(Sequence::create(actionMove, actionRemove, nullptr));
 }

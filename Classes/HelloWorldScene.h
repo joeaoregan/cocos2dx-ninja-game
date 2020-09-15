@@ -44,6 +44,8 @@ public:
 
 private:
 	Sprite* _player;
+
+	void addMonster(float dt);
 };
 
 #endif // __HELLOWORLD_SCENE_H__
