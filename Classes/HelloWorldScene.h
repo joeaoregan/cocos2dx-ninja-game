@@ -45,6 +45,10 @@ public:
 private:
 	Sprite* _player;
 
+	Label* scoreLbl;
+
+	int score;
+
 	void addMonster(float dt);
 
 	bool onTouchBegan(Touch *touch, Event *unused_event);

@@ -12,3 +12,4 @@ CMakeLists.txt
 # Keep
 !Resources/sprites/
 !Resources/audio/
+!Resources/fonts/

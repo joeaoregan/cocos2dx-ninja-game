@@ -95,6 +95,17 @@ bool HelloWorld::init()
 
 	SimpleAudioEngine::getInstance()->playBackgroundMusic(BACKGROUND_MUSIC_SFX, true);
 
+	auto visibleSize = Director::getInstance()->getVisibleSize();
+	scoreLbl = Label::createWithTTF("Score: " + std::to_string(score), "fonts/Marker Felt.ttf", 24);
+
+	if (scoreLbl == nullptr) {
+		problemLoading("'fonts/Marker Felt.ttf'");
+	} else {
+		scoreLbl->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height - scoreLbl->getContentSize().height));
+		this->addChild(scoreLbl, 1);
+	}
+
+
     return true;
 }
 
@@ -198,6 +209,8 @@ bool HelloWorld::onContactBegan(PhysicsContact &contact) {
 
 		if (nodeB != NULL) {
 			nodeB->removeFromParent();
+			score++;
+			scoreLbl->setString("Score: " + std::to_string(score));
 		}
 	}
 
